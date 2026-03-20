@@ -24,36 +24,49 @@ const search = async (req: Request, res: Response) => {
     const vector = embed.data.vectors[0];
 
     const hits = await embedModel.aggregate([
-      {
-        $vectorSearch: {
-          index: "vector_index",
-          path: "embedding",
-          queryVector: vector,
-          numCandidates: 100,
-          limit: 10,
-          filter: {
-            userId: userObjectId,
-          },
-        },
+  {
+    $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: vector,
+      numCandidates: 100,
+      limit: 10,
+      filter: {
+        userId: userObjectId,
       },
-      {
-        $project: {
-          contentId: 1,
-          score: { $meta: "vectorSearchScore" },
-        },
-      },
-    ]);
+    },
+  },
+  {
+    $addFields: {
+      score: { $meta: "vectorSearchScore" },
+    },
+  },
+  {
+    $match: {
+      score: { $gte: 0.60 },  // tune this after seeing logs
+    },
+  },
+  {
+    $project: {
+      contentId: 1,
+      score: 1,
+    },
+  },
+]);
 
-    const contentIds = hits.map((h) => h.contentId);
+// Debug: see what scores you're getting
+console.log("Vector hits:", hits.map(h => ({ score: h.score, contentId: h.contentId })));
 
-    const contents = await contentModel
-      .find({
-        _id: { $in: contentIds },
-      })
-      .populate({
-        path: "userId tags",
-        select: "username tagName",
-      });
+const contentIds = hits.map((h) => h.contentId);
+
+const contents = await contentModel
+  .find({
+    _id: { $in: contentIds },  // this is correct if contentId stores ObjectId ref to content
+  })
+  .populate({
+    path: "userId tags",
+    select: "username tagName",
+  });
 
     const arr = [];
 
