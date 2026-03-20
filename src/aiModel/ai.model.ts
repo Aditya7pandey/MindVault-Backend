@@ -32,7 +32,7 @@ CITATIONS:
 - Do NOT fabricate sources.
 
 FORMAT:
-- Start with a direct answer.
+- Start with a direct answer and the link.
 - Expand only if necessary.
 - Avoid verbosity unless the question requires it.
 

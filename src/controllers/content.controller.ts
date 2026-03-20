@@ -301,6 +301,87 @@ const getYoutube = async (req: Request, res: Response) => {
   }
 };
 
+const updateContent = async (req:Request,res:Response) =>{
+    try {
+      const userId = req.userId;
+      const {contentId,title,link,type,tags} = req.body;
+
+      if(!userId || !contentId){
+        return res.status(401).json({
+          message:"Invalid request",
+        })
+      }
+
+      let tagIds: Types.ObjectId[] = [];
+
+    for (let tagTitle of tags) {
+      // pehle check karo tag already hai ya nahi
+      let tag = await tagModel.findOne({
+        tagName: tagTitle,
+      });
+
+      // agar nahi hai → naya tag banao
+      if (!tag) {
+        tag = await tagModel.create({
+          tagName: tagTitle,
+          userId: userId,
+        });
+      }
+
+      tagIds.push(tag._id);
+    }
+
+    const content = await contentModel.updateOne({
+        userId:userId,
+        _id:contentId,
+      },{
+        title:title,
+        link:link,
+        type:type,
+        tags:tagIds,
+      })
+
+    const tagNames = tags.toString();
+
+    const textToEmbed = [title, type, tagNames];
+
+    const embedResponse = await axios.post("https://adiish-my-embedding-model.hf.space/embed", {
+      text: textToEmbed,
+    });
+
+    if (!embedResponse) {
+      await contentModel.deleteOne({ _id: contentId});
+
+      return res.status(501).json({
+        error: "Server 2 crashed",
+      });
+    }
+
+    const embedding = embedResponse.data.vectors[0];
+
+      // updating embeddings
+
+      await embedModel.updateOne({
+        userId:userId,
+        contentId:contentId
+      },{
+        embedding:embedding
+      })
+
+      return res.status(200).json({
+        message:"content updated successfully",
+        success:true,
+        content:content,
+      })
+    } catch (error) {
+      if(error instanceof Error){
+        return res.status(501).json({
+          error:error.message,
+        })
+      }
+    }
+}
+
 export {
   createContent,
   deleteContent,
@@ -310,4 +391,5 @@ export {
   getDocument,
   getLinks,
   getYoutube,
+  updateContent
 };

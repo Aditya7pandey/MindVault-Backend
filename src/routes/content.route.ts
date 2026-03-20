@@ -9,6 +9,7 @@ import {
   getTags,
   getTweet,
   getYoutube,
+  updateContent,
 } from "../controllers/content.controller.js";
 
 const router = express.Router();
@@ -16,6 +17,8 @@ const router = express.Router();
 router.post("/create-content", authMiddleware, createContent);
 
 router.get("/delete-content/:contentId", authMiddleware, deleteContent);
+
+router.post("/update-content", authMiddleware, updateContent);
 
 // router.post('/update-content',authMiddleware,)
 
